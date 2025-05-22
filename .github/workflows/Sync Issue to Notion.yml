@@ -1,0 +1,37 @@
+name: Sync Issue to Notion
+on:
+  issues:
+    types: [opened, edited, closed]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Issue to Notion
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { Client } = require("@notionhq/client");
+            const notion = new Client({ auth: process.env.NOTION_TOKEN });
+
+            const issue = context.payload.issue;
+            await notion.pages.create({
+              parent: { database_id: process.env.NOTION_DB_ID },
+              properties: {
+                Name: {
+                  title: [{ text: { content: issue.title } }]
+                },
+                Status: {
+                  select: { name: issue.state === "closed" ? "Done" : "To Do" }
+                },
+                "GitHub Issue URL": {
+                  url: issue.html_url
+                },
+                "GitHub Issue ID": {
+                  rich_text: [{ text: { content: String(issue.number) } }]
+                }
+              }
+            });
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}

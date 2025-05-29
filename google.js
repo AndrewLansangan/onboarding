@@ -31,7 +31,10 @@ function syncTeamDirectoryToSheet() {
 
     if (allRows.length > 0) {
         sheet.getRange(2, 1, allRows.length, allRows[0].length).setValues(allRows);
-    }
+      } else {
+    logInfo("No rows found in Notion Team Directory Database to sync.");
+}
 
-    logInfo("📢 `syncTeamDirectoryToSheet` script finished");
+
+logInfo("📢 `syncTeamDirectoryToSheet` script finished");
 }

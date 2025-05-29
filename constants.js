@@ -1,15 +1,3 @@
-// Slack field IDs
-const SLACK_FIELDS = {
-    POSITION: 'Xf06JZK27DRA',
-    TEAM: 'Xf03V366R202',
-    NOTION_PAGE_URL: 'Xf06JGJMBZPZ',
-    MANDATE_STATUS: 'Xf0759PXS7BP',
-    AVAILABILITY: 'Xf074Y4V1KHV',
-    CREATED_PROFILE: 'Xf075CJ4SXEF',
-    TIME_TRACKER_LAST_UPDATE: 'Xf07HUS9GSSC',
-    TIME_TRACKER_TOTAL: 'Xf07GZDPHHV4'
-};
-
 // Column names in sheets
 const SHEET_COLUMNS = {
     EMAIL: 'Email (Org)',
@@ -53,8 +41,8 @@ const NOTIFIED_TEAMS_PROPERTY_KEY = "notifiedCompletedTeamIds"; // Key for stori
      NotionPageURL: "Xf06JGJMBZPZ",
      MandateStatus: "Xf0759PXS7BP",
      Availability: "Xf074Y4V1KHV",
-     CreatedProfile: "Xf075CJ4SXEF",
-     TimeTrackerLastUpdate: "Xf07HUS9GSSC",
+     CreatedProfile: "Xf075CJ4STEF",
+     TimeTrackerLastUpdate: "Xf07HUS9SSC",
      TimeTrackerTotal: "Xf07GZDPHHV4"
  };
 
@@ -74,7 +62,7 @@ const NOTION_TEAM_DB_ID = '70779d3ee3cf467b9b86171acabc3321'; // Team Directory
 // API Settings
 const NOTION_HEADERS = {
     'Authorization': `Bearer ${getScriptConfig().NOTION_API_KEY}`,
-    'Notion-Version': '2022-06-28',
+    'Notion-Version': NOTION_VERSION,
     'Content-Type': 'application/json',
 };
 

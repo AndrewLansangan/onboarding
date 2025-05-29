@@ -35,7 +35,7 @@ function getScriptConfig() {
         NOTIFIED_TEAMS_PROPERTY_KEY: 'notifiedCompletedTeamIds',
     };
 }
-
+const [SLACK_USER_TOKEN] = getScriptConfig()
 // RUN linkDatabases first
 // Configuration
 function initializeConfig() {

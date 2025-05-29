@@ -69,8 +69,8 @@
  * Checks if the group exists before attempting to create it.
  * Logs events, including handle generation defaults via generateSlackHandle.
  *
- * @param {string} name - The desired name for the user group.
- * @param {string} token - Slack API token with group creation permissions.
+ * @param {string} slackGroupName - The desired name for the user group.
+ * @param {string} slackToken - Slack API token with group creation permissions.
  * @return {Object | undefined} Response object from Slack API or undefined on error.
  * @requires generateSlackHandle - Function to generate Slack-compliant handles.
  * @requires checkForExistingGroups - Function to check for existing groups.
@@ -78,22 +78,22 @@
  * @requires logToSlack - Global function for logging messages.
  * @requires Logger - Assumed Google Apps Script Logger or similar.
  */
-function createUserGroup(name, token) {
+function createUserGroup(slackGroupName, slackToken = SLACK_USER_TOKEN) {
     // Input validation for the name itself
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-        const errorMessage = `Invalid group name provided: "${name}". Cannot create group.`;
+    if (!slackGroupName || typeof slackGroupName !== 'string' || slackGroupName.trim() === '') {
+        const errorMessage = `Invalid group name provided: "${slackGroupName}". Cannot create group.`;
         Logger.log(errorMessage);
         // Assuming logToSlack is defined and accessible
         logToSlack(errorMessage);
         return { ok: false, error: 'invalid_group_name_provided' };
     }
 
-    const trimmedName = name.trim(); // Use trimmed name for consistency
+    const trimmedName = slackGroupName.trim(); // Use trimmed name for consistency
 
     try {
         Logger.log(`Attempting to find or create user group: "${trimmedName}"`);
         // Check using trimmed name
-        const groupId = checkForExistingGroups(trimmedName, token);
+        const groupId = checkForExistingGroups(trimmedName, slackToken);
 
         if (groupId) {
             Logger.log(
@@ -125,7 +125,7 @@ function createUserGroup(name, token) {
             const options = {
                 method: 'post',
                 headers: {
-                    Authorization: 'Bearer ' + token,
+                    Authorization: 'Bearer ' + slackToken,
                     'Content-Type': 'application/json',
                 },
                 // *** Use the generated handle and the trimmed name in the payload ***

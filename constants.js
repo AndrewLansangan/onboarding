@@ -1,3 +1,57 @@
+/**
+ * =============================================
+ * 🧩 Global Constants & Configuration Map
+ * =============================================
+ *
+ * Centralized reference for shared constants used
+ * across Notion, Slack, and Google Sheets integrations.
+ * This improves consistency, prevents hardcoding, and
+ * simplifies refactoring.
+ *
+ * ---------------------------------------------
+ * 📊 Sheet Column Identifiers
+ * ---------------------------------------------
+ * - `SHEET_COLUMNS`: Used to access values from rows in Google Sheets
+ * - `MANDATES_SHEET_COLUMNS`: Expected column structure for "Mandates" sheet
+ * - `TEAM_DIRECTORY_COLUMNS`: Expected column structure for "Team Directory" sheet
+ *
+ * ---------------------------------------------
+ * 🧠 Notion Properties
+ * ---------------------------------------------
+ * - `NOTION_PROPERTIES`: Common property names from synced Notion databases
+ * - `TEAM_NAME_PROPERTY`, `SCRUM_MASTER_RELATION_PROPERTY`: Specific to Team Directory DB
+ * - `SM_EMAIL_PROPERTY_IN_PEOPLE_DB`: Used for linking to People DB
+ * - `PEOPLE_RELATION_PROPERTY`: Relation field used for syncing people references
+ *
+ * ---------------------------------------------
+ * 🔐 Notion Configuration
+ * ---------------------------------------------
+ * - `NOTION_VERSION`: API version used in headers
+ * - `NOTION_QUERY_URL`, `NOTION_PAGE_UPDATE_URL`: Endpoint builders
+ * - `NOTION_HEADERS`: Standard headers for all Notion API requests
+ * - `NOTION_PAGE_SIZE`, `MAX_PAGE_SIZE`: Pagination limits
+ * - `NOTION_PEOPLE_DB_ID`, `NOTION_INTERNAL_PEOPLE_DB_ID`, `NOTION_TEAM_DB_ID`: Hardcoded fallbacks (usually loaded via `getScriptConfig()`)
+ *
+ * ---------------------------------------------
+ * 📅 Sheet Names & Statuses
+ * ---------------------------------------------
+ * - `MANDATES_SHEET_NAME`, `TEAM_SHEET_NAME`: Sheet tab names in spreadsheet
+ * - `COMPLETED_STATUS_VALUE`: Used to filter out completed mandates
+ * - `SILENCE_TEAMS_WITHOUT_SCRUM`: Toggle for team notifications
+ *
+ * ---------------------------------------------
+ * 📎 Slack Custom Profile Fields
+ * ---------------------------------------------
+ * - `SLACK_PROFILE_FIELDS`: Field IDs for updating Slack user profiles
+ * - `SLACK_USERGROUP_LIST_URL`: URL for reading Slack user groups
+ *
+ * ---------------------------------------------
+ * 🗝️ Script Properties Keys
+ * ---------------------------------------------
+ * - `TEAM_DB_ID_PROP_NAME`: Property key to fetch Team Directory DB ID
+ * - `NOTIFIED_TEAMS_PROPERTY_KEY`: Stores which teams have been notified
+ */
+
 // Column names in sheets
 const SHEET_COLUMNS = {
     EMAIL: 'Email (Org)',
@@ -66,6 +120,7 @@ const NOTION_HEADERS = {
     'Content-Type': 'application/json',
 };
 
+const SHEET_NAME = 'Mandates'; // Change to your actual sheet name
 // --- Default Values ---
 const COMPLETED_STATUS_VALUE = 'Completed';
 const SILENCE_TEAMS_WITHOUT_SCRUM = false;

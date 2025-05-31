@@ -4,148 +4,18 @@
  * @param {Sheet} sheet - The Google Sheet to read from
  * @return {Map} Map with team names as keys and arrays of emails as values
  */
-function readUsers(sheet) {
-    Logger.log(`Starting to read users from sheet: ${sheet.getName()}`);
-    let data = sheet.getDataRange();
-    let values = data.getValues();
-    const header = values.shift();
-    const invalidStatuses = new Set(['To Verify', 'Completed', 'Archived']);
-    const emailIndex = header.indexOf('Email (Org)');
-    const statusIndex = header.indexOf('Mandate (Status)');
-    const teamIndex = header.indexOf('Team (Current)');
-    const lastUpdateIndex = header.indexOf("Last Update");
-
-    Logger.log(
-        `Found columns - Email: ${emailIndex}, Status: ${statusIndex}, Team: ${teamIndex}`,
-    );
-
-    let groupsMap = new Map();
-    let processedRows = 0;
-    let skippedRows = 0;
-
-    for (let i = 0; i < values.length; i++) {
-        const row = values[i];
-        const email = row[emailIndex];
-        const status = row[statusIndex];
-        const usergroupCell = row[teamIndex];
-        const lastUpdate = row[lastUpdateIndex];
-        const parsedDate = parseCustomDate(lastUpdate);
-
-        if (parsedDate < lastRunTime) {
-            Logger.log("User already processed skipping");
-            continue;
-        }
-
-        if (!invalidStatuses.has(status)) {
-            const usergroups = usergroupCell.split(',').map((group) => group.trim());
-            Logger.log(
-                `Processing user ${email} with ${usergroups.length} team assignments`,
-            );
-            processedRows++;
-
-            usergroups.forEach((userGroup) => {
-                if (userGroup === '' || userGroup.toLowerCase().includes('admin')) {
-                    Logger.log(`skipping ${userGroup} because it's an admin group.`)
-                    return;
-                }
-
-                if (groupsMap.has(userGroup)) {
-                    const emails = groupsMap.get(userGroup);
-                    emails.push(email);
-                    Logger.log(`Added ${email} to existing group ${userGroup}`);
-                } else {
-                    groupsMap.set(userGroup, [email]);
-                    Logger.log(
-                        `Created new group ${userGroup} with first member ${email}`,
-                    );
-                }
-            });
-        } else {
-            Logger.log(`Skipping user ${email} with status: ${status}`);
-            skippedRows++;
-        }
-    }
-
-    Logger.log(
-        `Finished processing ${processedRows} users, skipped ${skippedRows} users`,
-    );
-    Logger.log(`Created ${groupsMap.size} total groups`);
-    return groupsMap;
-}
+/**
+ * Reads user data from a Google Sheet and groups users by their active team names.
+ * Filters out users with invalid mandate statuses and already processed entries based on `lastRunTime`.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to read user data from.
+ * @return {Map<string, string[]>} - A map of team names to arrays of user emails.
+ */
 
 function parseCustomDate(dateStr) {
     let [day, month, year] = String(dateStr).split('/').map(Number);
     return new Date(year, month - 1, day);
 }
-
-function runScript() {
-    logToSlack(
-        "📢 Starting execution of \`addGroupsToSlack\` script"
-    );
-    let externalSpreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    let sheet = externalSpreadsheet.getSheetByName(sheetName);
-
-    const groupsMap = readUsers(sheet);
-
-    for (let [groupName, emailList] of groupsMap.entries()) {
-        try {
-            let userGroupId = checkForExistingGroups(groupName, SLACK_USER_TOKEN);
-
-            if (!userGroupId) {
-                Logger.log(`Group '${groupName}' does not exist. Creating it...`);
-                let groupData = createUserGroup(groupName, SLACK_USER_TOKEN);
-
-                if (groupData && groupData.usergroup && groupData.usergroup.id) {
-                    userGroupId = groupData.usergroup.id;
-                    Logger.log(`Group '${groupName}' created with ID: ${userGroupId}`);
-                    Utilities.sleep(2000);
-                } else {
-                    Logger.log(`Failed to create group '${groupName}', skipping...`);
-                    continue;
-                }
-            } else {
-                Logger.log(`Group '${groupName}' already exists with ID: ${userGroupId}`);
-            }
-
-            const userIds = [];
-            for (let email of emailList) {
-                let userId = getUserIdByEmail(email, SLACK_USER_TOKEN);
-                if (userId) {
-                    userIds.push(userId);
-                } else {
-                    Logger.log(`User not found or error for email: ${email}`);
-                }
-            }
-
-            let existingUserIds = getUserGroupMembers(userGroupId, SLACK_USER_TOKEN);
-            const newUsers = userIds.filter(id => !existingUserIds.includes(id));
-
-            if (newUsers.length === 0) {
-                Logger.log(`All users already in group '${groupName}'. Skipping update.`);
-                continue;
-            }
-
-            Logger.log(`Adding users to group '${groupName}': ${newUsers.join(', ')}`);
-            let success = addUsersToUsergroup(userGroupId, newUsers, SLACK_USER_TOKEN);
-
-            if (success) {
-                Logger.log(`Successfully added users to group '${groupName}'`);
-            } else {
-                Logger.log(`Failed to add users to group '${groupName}'`);
-            }
-
-        } catch (err) {
-            Logger.log(`Error processing group '${groupName}': ${err}`);
-        }
-    }
-    PropertiesService.getScriptProperties().setProperty('LAST_RUN_TIME', Date.now().toString());
-    Logger.log("Finished processing all groups and users.");
-    logToSlack(
-        "📢 Execution of \`addGroupsToSlack\` script finished"
-    );
-}
-
-
 
 
 // Main function to link pages across databases
@@ -164,11 +34,11 @@ function linkDatabases() {
 
     logToSlack("Starting the process to link databases.");
 
-    const pagesDatabase1 = fetchAllPages(databaseId1, headers);
-    const pagesDatabase2 = fetchAllPages(databaseId2, headers);
+    const pagesDatabase1 = fetchAllNotionPages(databaseId1, headers);
+    const pagesDatabase2 = fetchAllNotionPages(databaseId2, headers);
 
     if (!pagesDatabase1.length || !pagesDatabase2.length) {
-        logToSlack("Failed to fetch pages from one or both databases. Please check the fetchAllPages function and the database IDs.");
+        logToSlack("Failed to fetch pages from one or both databases. Please check the fetchAllNotionPages function and the database IDs.");
         return;
     }
 
@@ -435,60 +305,7 @@ function notifyScrumMasterOfCompletedMandates() {
 }
 // --- Slack Helper Functions ---
 
-/**
- * Gets the Slack userID for a user by their email using fetchWithRetry.
- * @param {string} email - Email of the user.
- * @param {string} token - Slack API token with users:read.email permission.
- * @return {string|null} Slack UserID or null if not found or error occurs.
- */
-function getUserIdByEmail(email, token) {
-    if (!email || !token) {
-        Logger.log("getUserIdByEmail: Missing email or token.");
-        return null;
-    }
-    try {
-        const url = `https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(
-            email
-        )}`;
-        const options = {
-            method: "get",
-            headers: { Authorization: "Bearer " + token },
-            muteHttpExceptions: true,
-        };
 
-        const response = fetchWithRetry(url, options); // Use shared fetchWithRetry
-        const result = JSON.parse(response.getContentText());
-
-        if (result.ok && result.user && result.user.id) {
-            return result.user.id;
-        } else {
-            Logger.log(
-                `Error finding Slack user ID by email (${email}): ${
-                    result.error || "Unknown error"
-                }. Response: ${response.getContentText()}`
-            );
-            return null;
-        }
-    } catch (error) {
-        // Log error using the provided logToSlack
-        logToSlack(
-            `Exception occurred while retrieving user ID by email (${email}): ${error}`
-        );
-        return null;
-    }
-}
-function extractTeamDirectoryRow(page) {
-    const properties = page.properties;
-
-    const name = extractPropertyValue(properties["Name"], "Name");
-    const status = extractPropertyValue(properties["Status"], "Status");
-    const people = extractPropertyValue(properties["People (Current)"], "People (Current)");
-    const scrumMaster = extractPropertyValue(properties["Scrum Master"], "Scrum Master");
-    const activityEpic = extractPropertyValue(properties["Activity (Epic)"], "Activity (Epic)");
-    const dateEpic = extractPropertyValue(properties["Date (Epic)"], "Date (Epic)");
-
-    return [name, status, people, scrumMaster, activityEpic, dateEpic];
-}
 
 function extractPropertyValue(property, propertyName) {
     if (!property) {
@@ -552,78 +369,33 @@ function extractPropertyValue(property, propertyName) {
 }
 
 /**
- * The `timeTrackerRecap` function updates the "Notion Database (sync) - Mandates" Google Sheet with data from the
- * "All Recap - Current and Archived" (Google Sheet).
- *  Notion Database (sync) - Mandates (Google Sheet) : https://docs.google.com/spreadsheets/d/1uqCK0JDHKkuzDEfOlBcSqJCsVxHjCRouOW5F8hJZRUA/edit?gid=2131663677#gid=2131663677
- *  All Recap - Current and Archived" (Google Sheet) : https://docs.google.com/spreadsheets/d/1jnXb0JTCy6C0ORsGkepJBzQbPYIZHpBWO0gqvQVOvX4/edit?gid=0#gid=0
- *  It matches the "Greybox ID" from the target sheet with the "Recap"
- * name in the external sheet and retrieves the following columns: 'Error Detection', 'Last Update', 'Start Date',
- * and 'Hours (decimal)'. The data is then written into columns N to Q of the target sheet, ensuring accurate
- * and up-to-date information is reflected for each corresponding entry.
+ * External dependency (shared utility).
+ * Defined in: `global-utils.gs` or similar.
+ *
+ * @function fetchWithRetry
+ * @param {string} url
+ * @param {Object} options
+ * @param maxRetries
+ * @returns {HTTPResponse}
  */
+// fetchWithRetry() is assumed to be globally available
 
+function fetchWithRetries(url, options, maxRetries) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const response = UrlFetchApp.fetch(url, options);
+        const data = JSON.parse(response.getContentText());
 
-function timeTrackerRecap() {
-    logToSlack(
-        "📢 Starting execution of \`TimeTrackerRecap\` script"
-    );
-    const externalSpreadsheetId = "1jnXb0JTCy6C0ORsGkepJBzQbPYIZHpBWO0gqvQVOvX4";
-    const externalSheetName = "All Recap - Current and Archived";
-    const targetSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-
-    // Ensure that the relevant columns exist in the target sheet
-    const headers = ['Error Detection', 'Last Update', 'Start Date', 'Hours (decimal)'];
-    for (let i = 0; i < headers.length; i++) {
-        targetSheet.getRange(1, 14 + i).setValue(headers[i]); // Starting at column N (14th column)
-    }
-
-    const externalSs = SpreadsheetApp.openById(externalSpreadsheetId);
-    const externalSheet = externalSs.getSheetByName(externalSheetName);
-    if (!externalSheet) {
-        logToSlack("External sheet not found.");
-        return;
-    }
-
-    const externalData = externalSheet.getRange("A2:G" + externalSheet.getLastRow()).getValues();
-
-    // Create a map of names to their corresponding data
-    const nameToDataMap = {};
-    externalData.forEach(row => {
-        const name = row[0] ? row[0].trim().toLowerCase() : ""; // Recap names are in column A, normalized to lowercase and trimmed
-        if (name) {
-            nameToDataMap[name] = {
-                errorDetection: row[2], // Error Detection in column C
-                lastUpdate: formatDateTime(row[3]),     // Last Update in column D, format to "DD/MM/YYYY HH:MM:SS"
-                startDate: formatDateTime(row[4]),      // Start Date in column E, format to "DD/MM/YYYY HH:MM:SS"
-                hoursDecimal: row[5]    // Hours (decimal) in column F
-            };
+        if (data.ok) return response; // ✅ Success
+        else if (shouldRetry(data.error)) {
+            Utilities.sleep(2 ** attempt * 1000); // wait 1s, 2s, 4s...
+        } else {
+            break; // non-retriable error
         }
-    });
-
-    // Iterate over 'Greybox ID' in the target sheet to prepare data for updating
-    const targetDataRange = targetSheet.getRange("A2:A" + targetSheet.getLastRow());
-    const targetNames = targetDataRange.getValues();
-
-    const dataToWrite = targetNames.map(row => {
-        const name = row[0] ? row[0].trim().toLowerCase() : ""; // Normalize and trim the name
-        const data = nameToDataMap[name] || {
-            errorDetection: "",
-            lastUpdate: "",
-            startDate: "",
-            hoursDecimal: ""
-        };
-        return [data.errorDetection, data.lastUpdate, data.startDate, data.hoursDecimal];
-    });
-
-    // Update columns N to Q with the extracted data
-    targetSheet.getRange("N2:Q" + (1 + dataToWrite.length)).setValues(dataToWrite);
-    logToSlack(
-        "📢 Execution of \`TimeTrackerRecap\` script finished."
-    );
+    }
+    return lastFailedResponse;
 }
 
-
-function formatDateTime(dateValue) {
+function formatDateTimeForSheet(dateValue) {
     if (!dateValue) return "";
 
     // Check if the dateValue is a Date object, convert it to the desired string format
@@ -638,3 +410,10 @@ function formatDateTime(dateValue) {
 
     return ""; // Return an empty string if dateValue is not valid
 }
+
+function convertDate(isoDateString) {
+    const date = new Date(isoDateString);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+}
+formatDateTimeForSheet(dateValue)

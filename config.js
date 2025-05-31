@@ -1,11 +1,59 @@
 /**
+ * =============================================
+ * 🔗 Notion People Directory Linking Script
+ * =============================================
+ *
+ * This script links people from the public-facing People Directory
+ * to the internal HR-only People Directory in Notion, using email
+ * address matching. The relation is stored as a Notion relation property.
+ *
+ * ---------------------------------------------
+ * 🗃️ Databases Involved:
+ * ---------------------------------------------
+ * - People Directory (Public):
+ *   https://www.notion.so/grey-box/People-da052a0ffb3a428d8e7013c540c42665
+ * - People Directory (Internal):
+ *   https://www.notion.so/grey-box/47fbed712f3e4558b032edb9ec081f00?v=2d969f6b09084313823bca813f39db69
+ *
+ * ---------------------------------------------
+ * ⚙️ Main Functional Flow:
+ * ---------------------------------------------
+ * - `initializeConfig`: Loads API key, database IDs, and headers from Script Properties.
+ * - `fetchAllNotionPages`: Fetches all pages from a Notion database, paginated.
+ * - `updatePageRelationWithMultiple`: Updates a relation property with multiple page IDs.
+ * - `linkDatabases`: Orchestrates the linking process:
+ *     - Fetches both databases
+ *     - Maps email addresses to page IDs
+ *     - Updates the relation property of each page accordingly
+ *
+ * ---------------------------------------------
+ * 🧩 Relation Logic:
+ * ---------------------------------------------
+ * - Based on matching email addresses
+ * - Supports multiple matches per user
+ * - Skips if no email or relation already exists
+ *
+ * ---------------------------------------------
+ * 🔐 Configuration:
+ * ---------------------------------------------
+ * - `NOTION_API_KEY`
+ * - `NOTION_PEOPLE_DB_ID`
+ * - `NOTION_INTERNAL_PEOPLE_DB_ID`
+ * - Loaded via `getScriptConfig()`
+ *
+ * ---------------------------------------------
+ * 📋 Notion Reference:
+ * https://www.notion.so/grey-box/Sync-Relation-Notion-Team-Directory-with-People-Directory-syncNotionPeopleRelations-gs-a906389d2dd440b6a65c6ffe0130787e
+ */
+
+/**
  * This script facilitates the linking of pages between the People Directory Notion databases and the internal HR-only version by establishing relations based on email addresses.
  * People Directory (Notion database) : https://www.notion.so/grey-box/People-da052a0ffb3a428d8e7013c540c42665
  * People Directory (Internal) (Notion database) : https://www.notion.so/grey-box/47fbed712f3e4558b032edb9ec081f00?v=2d969f6b09084313823bca813f39db69
  *
  * Key Components:
  * - Configuration: Retrieves Notion API credentials and initializes database IDs for the two databases to be linked.
- * - `fetchAllPages`: Fetches all pages from a specified Notion database, handling pagination to ensure complete data retrieval.
+ * - `fetchAllNotionPages`: Fetches all pages from a specified Notion database, handling pagination to ensure complete data retrieval.
  * - `updatePageRelationWithMultiple`: Updates a specific relation property of a page in Notion, linking it to one or more pages based on shared email addresses.
  * - `linkDatabases`: Main function that orchestrates the linking process by:
  *   - Fetching pages from both databases.
@@ -35,7 +83,8 @@ function getScriptConfig() {
         NOTIFIED_TEAMS_PROPERTY_KEY: 'notifiedCompletedTeamIds',
     };
 }
-const [SLACK_USER_TOKEN] = getScriptConfig()
+
+const {SLACK_USER_TOKEN, LOGGING_CHANNEL_ID, NOTION_API_KEY, NOTION_TEAM_DB_ID, NOTION_INTERNAL_PEOPLE_DB_ID} = getScriptConfig()
 // RUN linkDatabases first
 // Configuration
 function initializeConfig() {

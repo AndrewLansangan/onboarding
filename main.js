@@ -70,7 +70,7 @@ function syncNotionPeopleDirectoryToGoogleSheet() {
 
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Mandates");
     sheet.clearContents();
-    sheet.appendRow(["Greybox ID", "Mandate (Status)", "Name", "Position", "Team (Current)", "Team (Previous)", "Mandate (Date)", "Hours (Initial)", "Hours (Current)", "Availability (avg h/w)", "Email (Org)", "Created (Profile)", "Notion Page URL"]);
+    sheet.appendRow(MANDATES_SHEET_COLUMNS);
 
     let allRows = [];
     let hasMore = true;
@@ -109,6 +109,14 @@ function syncNotionPeopleDirectoryToGoogleSheet() {
     );
 }
 
+/**
+ * Synchronizes data from the "Mandates" Google Sheet to Slack user profiles.
+ *
+ * Extracts each user's data, gets their Slack ID, and updates their profile fields.
+ *
+ * @function syncGoogleSheetToSlack
+ * @returns {void}
+ */
 function syncGoogleSheetToSlack() {
     logToSlack("📢 Starting syncSheetsMandatesToSlackGreyBox...");
 //reads user data sheet process them
@@ -123,6 +131,15 @@ function syncGoogleSheetToSlack() {
     logToSlack("✅ Finished syncSheetsMandatesToSlackGreyBox.");
 }
 
+/**
+ * Synchronizes data from the "Mandates" Google Sheet to Notion's "People Directory" database.
+ *
+ * For each row in the sheet, updates "Hours (Current)" and "Hours (Last Update)" in Notion,
+ * if changes are detected.
+ *
+ * @function syncGoogleSheetToNotion
+ * @returns {void}
+ */
 function syncGoogleSheetToNotion() {
     logToSlack(
         "📢 Starting execution of \`syncSheetsMandatesToNotionPeopleDirectory\` script"
@@ -143,13 +160,13 @@ function syncGoogleSheetToNotion() {
 
         // Skip row if both relevant Google Sheet values are null/empty
         if (!hoursCurrent && !lastUpdate) {
-            Logger.log(`Skipping row ${rowIndex + 2} as both Hours and Last Update are empty.`);
+            logInfo(`Skipping row ${rowIndex + 2} as both Hours and Last Update are empty.`);
             return;
         }
 
         const notionPageId = extractNotionPageId(notionUrl);
         if (!notionPageId) {
-            Logger.log(`Skipping row ${rowIndex + 2} as Notion Page ID is missing or invalid.`);
+            logInfo(`Skipping row ${rowIndex + 2} as Notion Page ID is missing or invalid.`);
             return;
         }
 
@@ -177,25 +194,34 @@ function syncGoogleSheetToNotion() {
         if (Object.keys(propertiesToUpdate).length > 0) {
             const updateSuccess = updateNotionPageProperties(notionPageId, propertiesToUpdate);
             if (updateSuccess) {
-                Logger.log(`Successfully updated Notion page ${notionPageId}`);
+                logInfo(`Successfully updated Notion page ${notionPageId}`);
             } else {
                 logToSlack(`Failed to update Notion page ${notionPageId}`);
             }
         } else {
-            Logger.log(`No changes detected for Notion Page ID: ${notionPageId}. Skipping update.`);
+            logInfo(`No changes detected for Notion Page ID: ${notionPageId}. Skipping update.`);
         }
     });
+
     logToSlack(
         "📢 Execution of \`syncSheetsMandatesToNotionPeopleDirectory\` script finished"
     );
 }
 
+/**
+ * Synchronizes the Notion Team Directory database to a Google Sheet.
+ *
+ * Fetches paginated data from the Notion Team database and writes it to the sheet.
+ *
+ * @function syncTeamDirectoryToSheet
+ * @returns {void}
+ */
 function syncTeamDirectoryToSheet() {
     logInfo("📢 Starting execution of `syncTeamDirectoryToSheet` script");
 
     const apiUrl = NOTION_QUERY_URL(NOTION_TEAM_DB_ID);
-
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TEAM_SHEET_NAME);
+
     sheet.clearContents();
     sheet.appendRow(TEAM_DIRECTORY_COLUMNS);
 
@@ -226,7 +252,6 @@ function syncTeamDirectoryToSheet() {
     } else {
         logInfo("No rows found in Notion Team Directory Database to sync.");
     }
-
 
     logInfo("📢 `syncTeamDirectoryToSheet` script finished");
 }

@@ -265,7 +265,7 @@ function fetchNotionDataWithRetry(apiUrl, headers, payload) {
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
     };
-    const response = fetchWithRetry(apiUrl, options);
+    const response = fetchWithRetries(apiUrl, options);
     return JSON.parse(response.getContentText());
 }
 

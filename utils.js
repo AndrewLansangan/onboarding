@@ -8,8 +8,8 @@
  * Reads user data from a Google Sheet and groups users by their active team names.
  * Filters out users with invalid mandate statuses and already processed entries based on `lastRunTime`.
  *
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to read user data from.
  * @return {Map<string, string[]>} - A map of team names to arrays of user emails.
+ * @param dateStr
  */
 
 function parseCustomDate(dateStr) {
@@ -372,7 +372,7 @@ function extractPropertyValue(property, propertyName) {
  * External dependency (shared utility).
  * Defined in: `global-utils.gs` or similar.
  *
- * @function fetchWithRetry
+ * @function fetchWithRetries
  * @param {string} url
  * @param {Object} options
  * @param maxRetries
@@ -380,7 +380,7 @@ function extractPropertyValue(property, propertyName) {
  */
 // fetchWithRetry() is assumed to be globally available
 
-function fetchWithRetries(url, options, maxRetries) {
+function fetchWithRetries(url, options, maxRetries = 3) {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         const response = UrlFetchApp.fetch(url, options);
         const data = JSON.parse(response.getContentText());
@@ -416,4 +416,3 @@ function convertDate(isoDateString) {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
 }
-formatDateTimeForSheet(dateValue)

@@ -73,10 +73,11 @@
  * @return {Object | undefined} Response object from Slack API or undefined on error.
  * @requires generateSlackHandle - Function to generate Slack-compliant handles.
  * @requires checkForExistingSlackGroups - Function to check for existing groups.
- * @requires fetchWithRetry - Function for making HTTP requests with retries.
+ * @requires fetchWithRetries - Function for making HTTP requests with retries.
  * @requires logToSlack - Global function for logging messages.
  * @requires Logger - Assumed Google Apps Script Logger or similar.
  */
+
 /**
  * ========================================
  * 🧩 Slack Integration Master Script
@@ -163,11 +164,10 @@
  */
 
 /**
- * Gets the Slack userID for a user by their email using fetchWithRetry.
- * @param {string} email - Email of the user.
- * @param {string} token - Slack API token with users:read.email permission.
- * @return {string|null} Slack UserID or null if not found or error occurs.
- */
+* Gets the Slack user ID for a user by their email using fetchWithRetry.
+* @param {string} email - Email of the user.
+* @returns {string|null} Slack user ID or null if not found or an error occurs.
+*/
 function getSlackUserIdByEmail(email) {
     if (!email || !SLACK_USER_TOKEN) {
         Logger.log("getUserIdByEmail: Missing email or token.");
@@ -179,11 +179,11 @@ function getSlackUserIdByEmail(email) {
         )}`;
         const options = {
             method: "get",
-            headers: { Authorization: "Bearer " + SLACK_USER_TOKEN },
+            headers: {Authorization: "Bearer " + SLACK_USER_TOKEN},
             muteHttpExceptions: true,
         };
 
-        const response = fetchWithRetry(url, options); // Use shared fetchWithRetry
+        const response = fetchWithRetries(url, options); // Use shared fetchWithRetry
         const result = JSON.parse(response.getContentText());
 
         if (result.ok && result.user && result.user.id) {
@@ -257,14 +257,14 @@ function generateSlackHandle(name) {
 function constructProfileFields(fields) {
     return {
         fields: {
-            "Xf06JZK27DRA": { value: fields.Position },
-            "Xf03V366R202": { value: fields.Team },
-            "Xf06JGJMBZPZ": { value: fields.NotionPageURL },
-            "Xf0759PXS7BP": { value: fields.MandateStatus },
-            "Xf074Y4V1KHV": { value: fields.Availability },
-            "Xf075CJ4SXEF": { value: fields.CreatedProfile },
-            "Xf07HUS9GSSC": { value: fields.TimeTrackerLastUpdate },
-            "Xf07GZDPHHV4": { value: fields.TimeTrackerTotal }
+            "Xf06JZK27DRA": {value: fields.Position},
+            "Xf03V366R202": {value: fields.Team},
+            "Xf06JGJMBZPZ": {value: fields.NotionPageURL},
+            "Xf0759PXS7BP": {value: fields.MandateStatus},
+            "Xf074Y4V1KHV": {value: fields.Availability},
+            "Xf075CJ4SXEF": {value: fields.CreatedProfile},
+            "Xf07HUS9GSSC": {value: fields.TimeTrackerLastUpdate},
+            "Xf07GZDPHHV4": {value: fields.TimeTrackerTotal}
         }
     };
 }
@@ -362,7 +362,7 @@ function extractUserDataFromSheet(sheetName) {
  * @return {Object} Response object from Slack API.
  * @requires generateSlackHandle - Function to generate Slack-compliant handles.
  * @requires checkForExistingSlackGroups - Function to check for existing groups.
- * @requires fetchWithRetry - Function for making HTTP requests with retries.
+ * @requires fetchWithRetries - Function for making HTTP requests with retries.
  * @requires logToSlack - Global function for logging messages.
  */
 function createUserGroup(slackGroupName, slackToken = SLACK_USER_TOKEN) {
@@ -370,7 +370,7 @@ function createUserGroup(slackGroupName, slackToken = SLACK_USER_TOKEN) {
         const errorMessage = `Invalid group name provided: "${slackGroupName}". Cannot create group.`;
         Logger.log(errorMessage);
         logToSlack(errorMessage);
-        return { ok: false, error: 'invalid_group_name_provided' };
+        return {ok: false, error: 'invalid_group_name_provided'};
     }
 
     const trimmedName = slackGroupName.trim();
@@ -401,11 +401,11 @@ function createUserGroup(slackGroupName, slackToken = SLACK_USER_TOKEN) {
                     Authorization: 'Bearer ' + slackToken,
                     'Content-Type': 'application/json',
                 },
-                payload: JSON.stringify({ name: trimmedName, handle: groupHandle }),
+                payload: JSON.stringify({name: trimmedName, handle: groupHandle}),
                 muteHttpExceptions: true,
             };
 
-            const response = fetchWithRetry(url, options);
+            const response = fetchWithRetries(url, options, 3);
             const data = JSON.parse(response.getContentText());
 
             if (data.ok) {
@@ -422,7 +422,7 @@ function createUserGroup(slackGroupName, slackToken = SLACK_USER_TOKEN) {
         const errorMessage = `Unexpected error in createUserGroup for "${trimmedName}": ${error.message}`;
         Logger.log(`${errorMessage}\n${error.stack || ''}`);
         logToSlack(errorMessage);
-        return { ok: false, error: `internal_script_error: ${error.message}` };
+        return {ok: false, error: `internal_script_error: ${error.message}`};
     }
 }
 
@@ -448,7 +448,7 @@ function getUserGroupMembers(userGroupId, token) {
             muteHttpExceptions: true
         };
 
-        const response = fetchWithRetry(url, options);
+        const response = fetchWithRetries(url, options);
         const result = JSON.parse(response.getContentText());
 
         if (result.ok) {
@@ -462,6 +462,7 @@ function getUserGroupMembers(userGroupId, token) {
         return [];
     }
 }
+
 /**
  * Adds users to a Slack user group if they're not already members.
  *
@@ -496,7 +497,7 @@ function addUsersToUsergroup(userGroupId, userIds, token) {
             muteHttpExceptions: true
         };
 
-        const response = fetchWithRetry(url, options);
+        const response = fetchWithRetries(url, options);
         const result = JSON.parse(response.getContentText());
 
         if (!result.ok) {
@@ -527,7 +528,7 @@ function addUsersToUsergroup(userGroupId, userIds, token) {
  * @example
  * sendDirectMessageToUser("UABC123", "Welcome to the workspace!", SLACK_BOT_TOKEN);
  */
-function sendDirectMessageToUser(userId, message, token) {
+function sendDirectMessageToUser(userId, message, token = SLACK_BOT_TOKEN) {
     if (!userId || !message || !token) {
         Logger.log("⚠️ sendDirectMessageToUser: Missing parameter(s).");
         return false;
@@ -551,7 +552,7 @@ function sendDirectMessageToUser(userId, message, token) {
     };
 
     try {
-        const response = fetchWithRetry(url, options);
+        const response = fetchWithRetries(url, options);
         const result = JSON.parse(response.getContentText());
 
         if (result.ok) {
@@ -566,7 +567,6 @@ function sendDirectMessageToUser(userId, message, token) {
         return false;
     }
 }
-
 
 /**
  * Checks if a user group with the specified name already exists in Slack.
@@ -583,11 +583,11 @@ function checkForExistingSlackGroups(slackGroupName, slackToken = SLACK_USER_TOK
     try {
         const options = {
             method: 'get',
-            headers: { Authorization: `Bearer ${slackToken}` },
+            headers: {Authorization: `Bearer ${slackToken}`},
             muteHttpExceptions: true,
         };
 
-        const response = fetchWithRetry(SLACK_USERGROUP_LIST_URL, options);
+        const response = fetchWithRetries(SLACK_USERGROUP_LIST_URL, options);
         const data = JSON.parse(response.getContentText());
 
         if (!data.ok) {

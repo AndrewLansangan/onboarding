@@ -21,3 +21,82 @@
 
 // --- Notion Helper Functions ---
 
+# 🔄 Sync Summary
+
+This document provides an overview of the main synchronization functions between **Notion**, **Google Sheets**, and **Slack** in the script.
+
+---
+
+## 📥 `syncNotionPeopleDirectoryToGoogleSheet`
+
+**From:**  
+→ Notion Database: `People Directory`
+
+**To:**  
+→ Google Sheet: `Mandates`
+
+**Purpose:**  
+Fetches paginated data from Notion, parses it, and writes it into the `Mandates` sheet.
+
+**Dependencies:**
+- `Config.notionDbPeople`
+- `fetchNotionData()`
+- `handleNotionApiResponse()`
+- `parseNotionPageRow()`
+
+---
+
+## 📤 `syncGoogleSheetToSlack`
+
+**From:**  
+→ Google Sheet: `Mandates`
+
+**To:**  
+→ Slack Profiles
+
+**Purpose:**  
+Reads users from the sheet, finds their Slack ID, and updates their Slack profile fields.
+
+**Dependencies:**
+- `extractUserDataFromSheet()`
+- `getSlackUserIdByEmail()`
+- `updateUserProfile()`
+
+---
+
+## 🔁 `syncGoogleSheetToNotion`
+
+**From:**  
+→ Google Sheet: `Mandates`
+
+**To:**  
+→ Notion Database: `People Directory`
+
+**Purpose:**  
+Updates `Hours (Current)` and `Hours (Last Update)` properties in Notion if values changed in the sheet.
+
+**Dependencies:**
+- `extractNotionPageId()`
+- `getNotionPageProperties()`
+- `updateNotionPageProperties()`
+
+---
+
+## 📥 `syncTeamDirectoryToSheet`
+
+**From:**  
+→ Notion Database: `Team Directory`
+
+**To:**  
+→ Google Sheet: `Teams`
+
+**Purpose:**  
+Fetches team data from Notion and syncs it to the corresponding sheet.
+
+**Dependencies:**
+- `NOTION_QUERY_URL()`
+- `fetchNotionData()`
+- `processNotionResponse()`
+- `transformNotionTeamPageToRow()`
+
+---

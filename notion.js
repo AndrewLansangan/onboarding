@@ -6,14 +6,8 @@
  * Retrieves the Notion API key from script config and returns standard headers.
  * @return {Object} Headers for Notion API requests.
  */
-const notionApiKey = getScriptConfig().NOTION_API_KEY;
-function getNotionHeaders() {
-    return {
-        Authorization: `Bearer ${notionApiKey}`,
-        'Content-Type': 'application/json',
-        'Notion-Version': '2022-06-28',
-    };
-}
+const notionApiKey = Config.NOTION.API_KEY;
+
 
 
 /* ============================================================================
@@ -112,6 +106,23 @@ function processNotionResponse(responseJson) {
     return responseJson;
 }
 
+function parseNotionPageRow(page) {
+    const props = page.properties;
+    return [
+        props["Name"]?.title?.[0]?.plain_text || "",
+        props["Position"]?.rich_text?.[0]?.plain_text || "",
+        props["Email (Org)"]?.email || "",
+        props["Team (Current)"]?.relation?.map(r => r.name).join(", ") || "",
+        props["Team (Previous)"]?.relation?.map(r => r.name).join(", ") || "",
+        props["Availability (avg h/w)"]?.number || "",
+        props["Hours (Initial)"]?.number || "",
+        props["Hours (Current)"]?.number || "",
+        props["Created (Profile)"]?.checkbox ? "✅" : "❌",
+        props["Status"]?.select?.name || "",
+        props["Mandate (Date)"]?.date?.start || "",
+        page.url
+    ];
+}
 
 /* ============================================================================
  * 🔁 SECTION 5: PAGE + PROPERTY PARSERS

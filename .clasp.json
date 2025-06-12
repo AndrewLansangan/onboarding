@@ -14,12 +14,13 @@
   "filePushOrder": [
     "config.js",
     "constants.js",
-    "google.js",
     "logger.js",
-    "main.js",
+    "utils.js",
     "notion.js",
     "slack.js",
-    "utils.js"
+    "google.js",
+    "main.js"
   ],
+
   "skipSubdirectories": true
 }

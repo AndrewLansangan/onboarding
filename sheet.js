@@ -1,16 +1,4 @@
 /**
- * @file Main orchestrator for syncing mandate data from Google Sheets to Slack.
- * @see Calls domain-specific helpers from `google.gs` and `slack-profile.gs`.
- */
-
-/**
- * @function syncTeamDirectoryToSheet
- * @const apilUrl
- * @returns {void}
- */
-
-
-/**
  * Reads user data from a Google Sheet and groups users by their active team names.
  * Filters out users with invalid mandate statuses and already processed entries based on `lastRunTime`.
  *
@@ -93,8 +81,6 @@ function readUsers(sheet) {
  * and 'Hours (decimal)'. The data is then written into columns N to Q of the target sheet, ensuring accurate
  * and up-to-date information is reflected for each corresponding entry.
  */
-
-
 function timeTrackerRecap() {
     logToSlack(
         "📢 Starting execution of \`TimeTrackerRecap\` script"
@@ -152,4 +138,24 @@ function timeTrackerRecap() {
     logToSlack(
         "📢 Execution of \`TimeTrackerRecap\` script finished."
     );
+}
+
+/**
+ * Loads structured data from a Google Sheet, splitting header and data rows.
+ *
+ * @param {string} sheetName - The name of the sheet tab.
+ * @returns {{ header: string[], rows: any[][] }} The header row and all subsequent data rows.
+ * @throws Will throw an error if the sheet is missing or has no rows.
+ */
+function loadSheetData(sheetName) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    if (!sheet) throw new Error(`❌ Sheet "${sheetName}" not found.`);
+
+    const values = sheet.getDataRange().getValues();
+    if (values.length < 2) {
+        throw new Error(`❌ Sheet "${sheetName}" has no data rows (must include header and at least one row).`);
+    }
+
+    const [header, ...rows] = values;
+    return { header, rows };
 }
